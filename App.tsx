@@ -5,7 +5,8 @@ import Step2 from './components/Step2';
 import Step3 from './components/Step3';
 import Step4 from './components/Step4';
 import { FormData, Language, CalculationResult } from './types';
-import { calculateResults } from './services/calculator';
+// Updated import to use the new utility directly for clearer intent, though calculator.ts wrapper exists
+import { calcHeatCost, normalizeInputs } from './services/heatUtils';
 import { TRANSLATIONS } from './constants';
 
 // Declare global for jspdf imported via script tag
@@ -81,7 +82,13 @@ function App() {
   const handleNext = () => {
     if (step < 4) {
       if (step === 3) {
-        setResults(calculateResults(data));
+        // Audit Implementation: Normalize inputs explicitly before calculation
+        const normalized = normalizeInputs(data);
+        // Update local state with normalized data to ensure UI consistency if user goes back
+        setData(normalized); 
+        
+        // Calculate with robust logic
+        setResults(calcHeatCost(normalized));
       }
       setStep(s => s + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -111,7 +118,7 @@ function App() {
     }
     setExporting(true);
     
-    const element = document.getElementById('results-container'); // Changed ID to capture better layout
+    const element = document.getElementById('results-container'); 
     if (element) {
         try {
             const canvas = await window.html2canvas(element, { scale: 2 });
@@ -129,14 +136,10 @@ function App() {
 
             pdf.setFontSize(12);
             pdf.text(TRANSLATIONS[lang].pdfInputsTitle, 15, 30);
-            pdf.setFontSize(10);
-            let y = 40;
-            pdf.text(`${TRANSLATIONS[lang].buildingClassLabel}: ${data.gebaeudeklasse}`, 15, y); y+=6;
-            pdf.text(`${TRANSLATIONS[lang].areaLabel}: ${data.flaeche} m²`, 15, y); y+=6;
+            // Inputs are now visually in the image, so we can reduce text dump or keep it as metadata
+            // For cleaner PDF, we rely on the screenshot of the results-container which now includes the summary
             
-            y += 10;
-            pdf.text(TRANSLATIONS[lang].pdfResultsTitle, 15, y);
-            y += 5;
+            let y = 40;
             pdf.addImage(imgData, 'PNG', 15, y, pdfWidth - 30, pdfHeight - 30); 
             
             pdf.save(`Heizkosten_Analyse_${configId}.pdf`);
@@ -174,7 +177,7 @@ function App() {
                 {step === 1 && <Step1 data={data} lang={lang} updateData={updateData} />}
                 {step === 2 && <Step2 data={data} lang={lang} updateData={updateData} />}
                 {step === 3 && <Step3 data={data} lang={lang} updateData={updateData} />}
-                {step === 4 && results && <Step4 results={results} lang={lang} onExportPdf={handlePdfExport} exporting={exporting} exportCount={exportCount} configId={configId} isNewBuild={data.heizsystem === 'keine'} />}
+                {step === 4 && results && <Step4 results={results} data={data} lang={lang} onExportPdf={handlePdfExport} exporting={exporting} exportCount={exportCount} configId={configId} isNewBuild={data.heizsystem === 'keine'} />}
             </div>
 
             <div className={`flex mt-10 pt-6 border-t border-slate-100 ${step === 1 ? 'justify-end' : 'justify-between'}`}>

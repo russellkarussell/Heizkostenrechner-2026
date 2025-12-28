@@ -1,9 +1,10 @@
 import React from 'react';
-import { CalculationResult, Language } from '../types';
+import { CalculationResult, Language, FormData } from '../types';
 import { TRANSLATIONS } from '../constants';
 
 interface Step4Props {
   results: CalculationResult;
+  data: FormData;
   lang: Language;
   onExportPdf: () => void;
   exporting: boolean;
@@ -12,18 +13,25 @@ interface Step4Props {
   isNewBuild: boolean;
 }
 
-const ResultCard = ({ title, value, unit, subtext, highlight = false, negative = false }: any) => (
-  <div className={`p-5 rounded-2xl shadow-sm border ${highlight ? (negative ? 'bg-red-50 border-red-100' : 'bg-[#e0f7fa]/50 border-[#4DBCE9]/30') : 'bg-slate-50 border-slate-100'}`}>
-    <h4 className="text-slate-500 text-sm font-medium mb-1">{title}</h4>
-    <div className={`text-2xl sm:text-3xl font-bold ${negative ? 'text-red-500' : (highlight ? 'text-[#4DBCE9]' : 'text-slate-700')}`}>
-      {value} <span className="text-base sm:text-lg font-normal text-slate-400">{unit}</span>
-    </div>
-    {subtext && <p className="text-xs text-slate-400 mt-2">{subtext}</p>}
-  </div>
-);
-
-const Step4: React.FC<Step4Props> = ({ results, lang, onExportPdf, exporting, exportCount, configId, isNewBuild }) => {
+const Step4: React.FC<Step4Props> = ({ results, data, lang, onExportPdf, exporting, exportCount, configId, isNewBuild }) => {
   const t = TRANSLATIONS[lang];
+
+  // Helper mappings for display
+  const getSystemLabel = (key: string) => {
+    const map: Record<string, string> = {
+      heizoel: 'Heizöl', erdgas_h: 'Erdgas (H)', erdgas_l: 'Erdgas (L)',
+      fluessiggas: 'Flüssiggas', pellets: 'Pellets', strom: 'Strom', keine: 'Neubau'
+    };
+    return map[key] || key;
+  };
+
+  const getBuildingLabel = (key: string) => {
+     const map: Record<string, string> = {
+         alt_unsaniert: 'Altbau, unsaniert', alt_teilsaniert: 'Altbau, teilsaniert',
+         alt_saniert: 'Altbau, saniert', neubau: 'Neubau', niedrigenergie: 'Niedrigenergie'
+     };
+     return map[key] || key;
+  };
 
   return (
     <div className="fade-in-up">
@@ -35,6 +43,72 @@ const Step4: React.FC<Step4Props> = ({ results, lang, onExportPdf, exporting, ex
       
       <div id="results-container" className="space-y-8">
          
+         {/* -- NEW: Input Summary Section -- */}
+         <section>
+            <h3 className="text-lg font-semibold text-slate-700 mb-4 px-1">Gewählte Parameter</h3>
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm text-sm text-slate-600">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                    
+                    {/* Column 1 */}
+                    <div className="space-y-3">
+                        <div className="flex justify-between border-b border-slate-50 pb-1">
+                            <span>Immobilie:</span>
+                            <span className="font-semibold text-slate-800">{getBuildingLabel(data.gebaeudeklasse)}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-50 pb-1">
+                            <span>Fläche:</span>
+                            <span className="font-semibold text-slate-800">{data.flaeche} m²</span>
+                        </div>
+                        {data.method === 'verbrauch' && !isNewBuild && (
+                             <div className="flex justify-between border-b border-slate-50 pb-1">
+                                <span>Verbrauch (Alt):</span>
+                                <span className="font-semibold text-slate-800">{data.verbrauch}</span>
+                            </div>
+                        )}
+                        {!isNewBuild && (
+                             <div className="flex justify-between border-b border-slate-50 pb-1">
+                                <span>Altsystem:</span>
+                                <span className="font-semibold text-slate-800">{getSystemLabel(data.heizsystem)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between border-b border-slate-50 pb-1">
+                            <span>WP-Strompreis:</span>
+                            <span className="font-semibold text-slate-800">{data.strompreis.toFixed(2)} €/kWh</span>
+                        </div>
+                    </div>
+
+                    {/* Column 2 */}
+                    <div className="space-y-3">
+                         <div className="flex justify-between border-b border-slate-50 pb-1">
+                            <span>Vorlauftemperatur:</span>
+                            <span className="font-semibold text-slate-800">{data.vorlauftemperatur} °C</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-50 pb-1">
+                            <span>Fußbodenheizung:</span>
+                            <span className="font-semibold text-slate-800">{data.anteilFussbodenheizung} %</span>
+                        </div>
+                        {data.useSolarthermie && (
+                             <div className="flex justify-between border-b border-slate-50 pb-1">
+                                <span>Solarthermie:</span>
+                                <span className="font-semibold text-[#F39C12]">Ja ({data.solarthermieFlaeche} m²)</span>
+                            </div>
+                        )}
+                         {data.useFans && (
+                             <div className="flex justify-between border-b border-slate-50 pb-1">
+                                <span>Heizkörperlüfter:</span>
+                                <span className="font-semibold text-[#F39C12]">Ja</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between border-b border-slate-50 pb-1">
+                            <span>Investition (netto):</span>
+                            <span className="font-semibold text-slate-800">{(data.investition - data.foerderung).toLocaleString()} €</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+         </section>
+
          {!isNewBuild && (
              <section className="animate-fade-in delay-100">
                  <h3 className="text-lg font-semibold text-slate-700 mb-4 px-1">{t.resultSavingsAnnual}</h3>
