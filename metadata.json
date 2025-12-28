@@ -1,0 +1,5 @@
+{
+  "name": "TOP: Heizkostenersparnis-Rechner",
+  "description": "A calculator to estimate heating cost savings when switching to a heat pump system.",
+  "requestFramePermissions": []
+}
